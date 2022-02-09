@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"fmt"
 
@@ -13,16 +14,22 @@ import (
 	"github.com/tsliwowicz/go-wrk/util"
 )
 
-func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int, allowRedirects bool, clientCert, clientKey, caCert string, usehttp2 bool) (*http.Client, error) {
+func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int, allowRedirects bool, clientCert, clientKey, caCert string, usehttp2 bool, proxy string) (*http.Client, error) {
 
-	client := &http.Client{}
-	//overriding the default parameters
-	client.Transport = &http.Transport{
+	transport := &http.Transport{
 		DisableCompression:    disableCompression,
 		DisableKeepAlives:     disableKeepAlive,
 		ResponseHeaderTimeout: time.Millisecond * time.Duration(timeoutms),
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: skipVerify},
 	}
+
+	proxyUrl, err := url.Parse(proxy)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse proxy URL, got error %v", err)
+	}
+	transport.Proxy = http.ProxyURL(proxyUrl)
+
+	client := &http.Client{Transport: transport}
 
 	if !allowRedirects {
 		//returning an error when trying to redirect. This prevents the redirection from happening.

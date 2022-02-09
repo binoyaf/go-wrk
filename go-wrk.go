@@ -38,6 +38,8 @@ var clientCert string
 var clientKey string
 var caCert string
 var http2 bool
+var proxy string
+var delay int
 
 func init() {
 	flag.BoolVar(&versionFlag, "v", false, "Print version details")
@@ -58,6 +60,8 @@ func init() {
 	flag.StringVar(&clientKey, "key", "", "Private key file name (SSL/TLS")
 	flag.StringVar(&caCert, "ca", "", "CA file to verify peer against (SSL/TLS)")
 	flag.BoolVar(&http2, "http", true, "Use HTTP/2")
+	flag.StringVar(&proxy, "x", "", "Proxy to use")
+	flag.IntVar(&delay, "w", 0, "Wait time (in seconds) between requests")
 }
 
 //printDefaults a nicer format for the defaults
@@ -125,7 +129,7 @@ func main() {
 	}
 
 	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
-		allowRedirectsFlag, disableCompression, disableKeepAlive, skipVerify, clientCert, clientKey, caCert, http2)
+		allowRedirectsFlag, disableCompression, disableKeepAlive, skipVerify, clientCert, clientKey, caCert, http2, proxy, delay)
 
 	for i := 0; i < goroutines; i++ {
 		go loadGen.RunSingleLoadSession()
