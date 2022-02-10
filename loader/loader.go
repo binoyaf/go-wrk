@@ -187,8 +187,10 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 		log.Fatal(err)
 	}
 
-	r := rand.Intn(cfg.initialDelay)
-	time.Sleep(time.Duration(r) * time.Second)
+	if cfg.initialDelay > 0 {
+		r := rand.Intn(cfg.initialDelay)
+		time.Sleep(time.Duration(r) * time.Second)
+	}
 
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
 		respSize, reqDur := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)

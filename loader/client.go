@@ -23,11 +23,13 @@ func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: skipVerify},
 	}
 
-	proxyUrl, err := url.Parse(proxy)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse proxy URL, got error %v", err)
+	if proxy != "" {
+		proxyUrl, err := url.Parse(proxy)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse proxy URL, got error %v", err)
+		}
+		transport.Proxy = http.ProxyURL(proxyUrl)
 	}
-	transport.Proxy = http.ProxyURL(proxyUrl)
 
 	client := &http.Client{Transport: transport}
 
