@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -39,7 +40,8 @@ type LoadCfg struct {
 	caCert             string
 	http2              bool
 	proxy              string
-	delay              int
+	requestDelay       int
+	initialDelay       int
 }
 
 // RequesterStats used for colelcting aggregate statistics
@@ -70,9 +72,11 @@ func NewLoadCfg(duration int, //seconds
 	caCert string,
 	http2 bool,
 	proxy string,
-	delay int) (rt *LoadCfg) {
+	requestDelay int,
+	initialDelay int) (rt *LoadCfg) {
 	rt = &LoadCfg{duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
-		allowRedirects, disableCompression, disableKeepAlive, skipVerify, 0, clientCert, clientKey, caCert, http2, proxy, delay}
+		allowRedirects, disableCompression, disableKeepAlive, skipVerify, 0, clientCert, clientKey, caCert, http2,
+		proxy, requestDelay, initialDelay}
 	return
 }
 
@@ -183,6 +187,9 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 		log.Fatal(err)
 	}
 
+	r := rand.Intn(cfg.initialDelay)
+	time.Sleep(time.Duration(r) * time.Second)
+
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
 		respSize, reqDur := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
 		if respSize > 0 {
@@ -195,8 +202,8 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 			stats.NumErrs++
 		}
 
-		if cfg.delay > 0 {
-			time.Sleep(time.Duration(cfg.delay) * time.Second)
+		if cfg.requestDelay > 0 {
+			time.Sleep(time.Duration(cfg.requestDelay) * time.Second)
 		}
 	}
 	cfg.statsAggregator <- stats

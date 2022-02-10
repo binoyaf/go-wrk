@@ -39,7 +39,8 @@ var clientKey string
 var caCert string
 var http2 bool
 var proxy string
-var delay int
+var requestDelay int
+var initialDelay int
 
 func init() {
 	flag.BoolVar(&versionFlag, "v", false, "Print version details")
@@ -61,7 +62,8 @@ func init() {
 	flag.StringVar(&caCert, "ca", "", "CA file to verify peer against (SSL/TLS)")
 	flag.BoolVar(&http2, "http", true, "Use HTTP/2")
 	flag.StringVar(&proxy, "x", "", "Proxy to use")
-	flag.IntVar(&delay, "w", 0, "Wait time (in seconds) between requests")
+	flag.IntVar(&requestDelay, "request-delay", 0, "Wait time (in seconds) between requests")
+	flag.IntVar(&initialDelay, "initial-delay", 0, "Initial delay (in seconds) - random number between 0 and initial-delay")
 }
 
 //printDefaults a nicer format for the defaults
@@ -129,7 +131,8 @@ func main() {
 	}
 
 	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
-		allowRedirectsFlag, disableCompression, disableKeepAlive, skipVerify, clientCert, clientKey, caCert, http2, proxy, delay)
+		allowRedirectsFlag, disableCompression, disableKeepAlive, skipVerify, clientCert, clientKey, caCert, http2,
+		proxy, requestDelay, initialDelay)
 
 	for i := 0; i < goroutines; i++ {
 		go loadGen.RunSingleLoadSession()
