@@ -72,13 +72,11 @@ func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int
 	}
 
 	tlsConfig.BuildNameToCertificate()
-	t := &http.Transport{
-		TLSClientConfig: tlsConfig,
-	}
+	transport.TLSClientConfig = tlsConfig
 
 	if usehttp2 {
-		http2.ConfigureTransport(t)
+		http2.ConfigureTransport(transport)
 	}
-	client.Transport = t
+	client.Transport = transport
 	return client, nil
 }
