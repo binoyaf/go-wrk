@@ -12,6 +12,7 @@ import (
 
 	"github.com/tsliwowicz/go-wrk/loader"
 	"github.com/tsliwowicz/go-wrk/util"
+	"math"
 )
 
 const APP_VERSION = "0.9"
@@ -139,7 +140,7 @@ func main() {
 	}
 
 	responders := 0
-	aggStats := loader.RequesterStats{MinRequestTime: time.Minute}
+	aggStats := loader.RequesterStats{MinRequestTime: math.MaxInt64}
 
 	for responders < goroutines {
 		select {
