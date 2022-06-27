@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/tsliwowicz/go-wrk/util"
+	"math"
 )
 
 const (
@@ -33,7 +34,7 @@ type LoadCfg struct {
 	allowRedirects     bool
 	disableCompression bool
 	disableKeepAlive   bool
-	skipVerify	 	   bool
+	skipVerify         bool
 	interrupted        int32
 	clientCert         string
 	clientKey          string
@@ -111,7 +112,7 @@ func escapeUrlStr(in string) string {
 
 //DoRequest single request implementation. Returns the size of the response and its duration
 //On error - returns -1 on both
-func DoRequest(httpClient *http.Client, header map[string]string, method, host, loadUrl, reqBody string) (respSize int, duration time.Duration) {
+func DoRequest(httpClient *http.Client, header map[string]string, method, host, loadUrl, reqBody string) (respSize int64, duration time.Duration) {
 	respSize = -1
 	duration = -1
 
@@ -158,18 +159,18 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 			resp.Body.Close()
 		}
 	}()
-	body, err := ioutil.ReadAll(resp.Body)
+	bodyLength, err := io.Copy(ioutil.Discard, resp.Body)
 	if err != nil {
 		fmt.Println("An error occured reading body", err)
 	}
 	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
 		duration = time.Since(start)
-		respSize = len(body) + int(util.EstimateHttpHeadersSize(resp.Header))
+		respSize = bodyLength + util.EstimateHttpHeadersSize(resp.Header)
 	} else if resp.StatusCode == http.StatusMovedPermanently || resp.StatusCode == http.StatusTemporaryRedirect {
 		duration = time.Since(start)
-		respSize = int(resp.ContentLength) + int(util.EstimateHttpHeadersSize(resp.Header))
+		respSize = resp.ContentLength + util.EstimateHttpHeadersSize(resp.Header)
 	} else {
-		fmt.Println("received status code", resp.StatusCode, "from", resp.Header, "content", string(body), req)
+		fmt.Println("received status code", resp.StatusCode, "from", resp.Header, req)
 	}
 
 	return
@@ -178,10 +179,10 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 //Requester a go function for repeatedly making requests and aggregating statistics as long as required
 //When it is done, it sends the results using the statsAggregator channel
 func (cfg *LoadCfg) RunSingleLoadSession() {
-	stats := &RequesterStats{MinRequestTime: time.Minute}
+	stats := &RequesterStats{MinRequestTime: math.MaxInt64}
 	start := time.Now()
 
-	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.skipVerify, 
+	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.skipVerify,
 		cfg.timeoutms, cfg.allowRedirects, cfg.clientCert, cfg.clientKey, cfg.caCert, cfg.http2, cfg.proxy)
 	if err != nil {
 		log.Fatal(err)
@@ -195,7 +196,7 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
 		respSize, reqDur := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
 		if respSize > 0 {
-			stats.TotRespSize += int64(respSize)
+			stats.TotRespSize += respSize
 			stats.TotDuration += reqDur
 			stats.MaxRequestTime = util.MaxDuration(reqDur, stats.MaxRequestTime)
 			stats.MinRequestTime = util.MinDuration(reqDur, stats.MinRequestTime)
